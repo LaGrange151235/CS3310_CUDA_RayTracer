@@ -103,23 +103,26 @@ __global__ void render(vec3* fb, int max_x, int max_y, int ns, camera** cam, hit
 
 __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-        Texture* image = new ImageTexture(dataPtr, 128, 128);
-
-        curandState local_rand_state = *rand_state;
+        Texture* image = new ImageTexture(dataPtr, 2048, 2048);
         Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
         Texture* color = new ConstantTexture(vec3(128.0 / 255, 0, 128.0 / 255));
-        d_list[0] = new sphere(vec3(0, -1000.0, -1), 1000, new lambertian(checker)); 
-        int i = 1;
-        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5));
-        d_list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(color));
-        d_list[i++] = new sphere(vec3(4, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
-        d_list[i++] = new sphere(vec3(4, 1.0, 2), 1.0, new lambertian(image));
-        *rand_state = local_rand_state;
-        *d_world = new hitable_list(d_list, 1 + 4);
 
-        vec3 lookfrom(13, 6, 6);
-        vec3 lookat(0, 0, 0);
-        float dist_to_focus = 10.0; (lookfrom - lookat).length();
+        curandState local_rand_state = *rand_state;
+        
+        int i = 1;
+
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker)); 
+        //d_list[i++] = new sphere(vec3(7, 1, 0), 1.0, new dielectric(1.5));
+        //d_list[i++] = new sphere(vec3(5, 1, 0), 1.0, new lambertian(color));
+        //d_list[i++] = new sphere(vec3(3, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new lambertian(image));
+        
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+
+        vec3 lookfrom(10, 2, 0);
+        vec3 lookat(0, 1, 0);
+        float dist_to_focus = (lookfrom - lookat).length();
         float aperture = 0.1;
         *d_camera = new camera(lookfrom,
             lookat,
@@ -132,7 +135,7 @@ __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_cam
 }
 
 __global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camera) {
-    for (int i = 0; i < 1 + 4; i++) {
+    for (int i = 0; i < 2; i++) {
         delete ((sphere*)d_list[i])->mat_ptr;
         delete d_list[i];
     }
@@ -143,7 +146,7 @@ __global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camer
 int main() {
     int nx = 1200;
     int ny = 800;
-    int ns = 10;
+    int ns = 64;
     int tx = 8;
     int ty = 8;
 
@@ -172,8 +175,8 @@ int main() {
     // make our world of hitables & the camera
     int iw, ih, n;
     unsigned char* idata = stbi_load("logo.jpg", &iw, &ih, &n, 0);
-    int ow = 128;
-    int oh = 128;
+    int ow = 2048;
+    int oh = 2048;
     auto* odata = (unsigned char*)malloc(ow * oh * n);
     stbir_resize(idata, iw, ih, 0, odata, ow, oh, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0,
         STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP,
