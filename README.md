@@ -9,6 +9,7 @@ This simple ray tracer is based on [Ray Tracing in One Weekend](https://raytraci
 - Driver Version: 512.78
 - [CUDA Version: 11.6](https://developer.nvidia.com/cuda-11-6-0-download-archive)
 - [Visual Studio 2022 Community](https://visualstudio.microsoft.com/zh-hans/thank-you-downloading-visual-studio/?sku=Community&channel=Release&version=VS2022&source=VSLandingPage&passive=false&cid=2030)
+- Image Utilities: [stb](https://github.com/nothings/stb)
 ------
 ## How to build
 0. [How to setup CUDA with Visual Studio(Chinese)](https://zhuanlan.zhihu.com/p/488518526)
