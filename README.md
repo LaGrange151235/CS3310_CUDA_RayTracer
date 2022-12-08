@@ -38,11 +38,11 @@ In the folder "Advance_Version", you can build a naïve ray tracer with GUI and 
 
 22/12/9 update: I have added diffuse light material(in *material.h*) and rectangle hittable shape(in *aarect.h*). The output result can be as below:
 
-![](C:\Users\zhang\source\repos\CUDA_Ray_Tracing_src\pic\advance_result.png)
+![](pic/advance_result.png)
 
 Also I have tried **skybox** method to show the scenery of our campus in SJTU. The output result can be as below:
 
-![](C:\Users\zhang\source\repos\CUDA_Ray_Tracing_src\pic\advance_result2.gif)
+![](pic/advance_result2.gif)
 
 ----
 
@@ -57,5 +57,5 @@ Also I have tried **skybox** method to show the scenery of our campus in SJTU. T
 - [ ] .obj support
 
 - [ ] ...
-
- (Too much wanna do, too naïve to implement  /(ㄒoㄒ)/~~)
+  
+  (Too much wanna do, too naïve to implement  /(ㄒoㄒ)/~~)
