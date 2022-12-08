@@ -26,30 +26,36 @@ This simple ray tracer is based on [Ray Tracing in One Weekend](https://raytraci
 
 ## Basic Version
 
-In the folder "Basic_Version", you can build a naive ray tracer output .ppm image.
+In the folder "Basic_Version", you can build a naïve ray tracer output .ppm image.
 
 ![](pic/basic_result.jpg)
 
 ## Advance Version
 
-In the folder "Advance_Version", you can build a naive ray tracer with GUI and real time renderering (very low fps though). You may need to set the GUI support following this video [GPU Raytracer in C++ Part 2: Render to a window](https://www.youtube.com/watch?v=H3DsNoz2osw "GPU Raytracer in C++ Part 2: Render to a window"). In order to accelerate, I have modified *qbImage.cpp* and *qbImage.h*, so be careful they are not completely the same as the original version from [QuantitativeBytes/qbRayTrace2/qbRayTrace](https://github.com/QuantitativeBytes/qbRayTrace2/tree/main/qbRayTrace).
+In the folder "Advance_Version", you can build a naïve ray tracer with GUI and real time rendering (very low fps though). You may need to set the GUI support following this video [GPU Raytracer in C++ Part 2: Render to a window](https://www.youtube.com/watch?v=H3DsNoz2osw "GPU Raytracer in C++ Part 2: Render to a window"). In order to accelerate, I have modified *qbImage.cpp* and *qbImage.h*, so be careful they are not completely the same as the original version from [QuantitativeBytes/qbRayTrace2/qbRayTrace](https://github.com/QuantitativeBytes/qbRayTrace2/tree/main/qbRayTrace).
 
 ![](pic/advance_result.gif)
+
+22/12/9 update: I have added diffuse light material(in *material.h*) and rectangle hittable shape(in *aarect.h*). The output result can be as below:
+
+![](C:\Users\zhang\source\repos\CUDA_Ray_Tracing_src\pic\advance_result.png)
+
+Also I have tried **skybox** method to show the scenery of our campus in SJTU. The output result can be as below:
+
+![](C:\Users\zhang\source\repos\CUDA_Ray_Tracing_src\pic\advance_result2.gif)
 
 ----
 
 ## TODO
 
-- [] AABB accelerating structure
+- [x] AABB accelerating structure
 
-- [] diffuse light material
+- [x] diffuse light material
 
-- [] different geometries
+- [x] rectangle shape
 
-- [] .obj support
+- [ ] .obj support
 
-- ...
-  
-  
-  
-   (Too much wanna do, too naive to implement  /(ㄒoㄒ)/~~)
+- [ ] ...
+
+ (Too much wanna do, too naïve to implement  /(ㄒoㄒ)/~~)

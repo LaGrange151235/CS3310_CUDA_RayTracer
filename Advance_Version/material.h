@@ -42,6 +42,9 @@ __device__ vec3 reflect(const vec3& v, const vec3& n) {
 
 class material {
 public:
+    __device__ virtual vec3 emitted(const hit_record& rec, float u, float v, vec3 p) const {
+        return vec3(0.0, 0.0, 0.0);
+    }
     __device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState* local_rand_state) const = 0;
 };
 
@@ -53,7 +56,7 @@ public:
         scattered = ray(rec.p, target - rec.p);
         float u, v;
         get_sphere_uv(rec.normal ,u, v);
-        attenuation = albedo->value(u, v, rec.normal);
+        attenuation = albedo->value(u, v, rec.p);
         return true;
     }
 
@@ -69,6 +72,7 @@ public:
         attenuation = albedo;
         return (dot(scattered.direction(), rec.normal) > 0.0f);
     }
+
     vec3 albedo;
     float fuzz;
 };
@@ -112,4 +116,23 @@ public:
 
     float ref_idx;
 };
+
+class diffuse_light : public material {
+public:
+    __device__ diffuse_light(Texture* a) : emit(a) {}
+    //diffuse_light(color c) : emit(make_shared<solid_color>(c)) {}
+
+    __device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState* local_rand_state) const {
+        return false;
+    }
+
+    __device__ virtual vec3 emitted(const hit_record& rec, float u, float v, vec3 p) const {
+        get_sphere_uv(rec.normal, u, v);
+        return emit->value(u, v, rec.p);
+    }
+
+public:
+    Texture* emit;
+};
+
 #endif

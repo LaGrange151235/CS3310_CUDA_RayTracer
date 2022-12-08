@@ -9,6 +9,7 @@
 #include "vec3.h"
 #include "ray.h"
 #include "sphere.h"
+#include "aarect.h"
 #include "hitable_list.h"
 #include "camera.h"
 #include "material.h"
@@ -26,9 +27,7 @@
 #include "qbImage.h"
 
 #define RND (curand_uniform(&local_rand_state))
-
 #define one_degree 0.017453293
-
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
@@ -49,27 +48,38 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 __device__ vec3 color(const ray& r, hitable** world, curandState* local_rand_state) {
     ray cur_ray = r;
     vec3 cur_attenuation = vec3(1.0, 1.0, 1.0);
-    for (int i = 0; i < 16; i++) {
+    
+    vec3 background(0, 0, 0);
+    vec3 emitted_stack[8];
+    vec3 ray_color_stack[8];
+    vec3 attenuation_stack[8];
+    int index = 0;
+
+    for (int i = 0; i < 6; i++) {
         hit_record rec;
-        if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
-            ray scattered;
-            vec3 attenuation;
-            if (rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state)) {
-                cur_attenuation *= attenuation;
-                cur_ray = scattered;
-            }
-            else {
-                return vec3(0.0, 0.0, 0.0);
-            }
+        if (!(*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
+            ray_color_stack[i] = background;
+            index = i;
+            break;
         }
-        else {
-            vec3 unit_direction = unit_vector(cur_ray.direction());
-            float t = 0.5f * (unit_direction.y() + 1.0f);
-            vec3 c = (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
-            return cur_attenuation * c;
+
+        ray scattered;
+        vec3 attenuation;
+        vec3 emitted = rec.mat_ptr->emitted(rec, 0, 0, vec3(0, 0, 0));
+        emitted_stack[i] = emitted;
+        if (!rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state)) {
+            ray_color_stack[i] = emitted;
+            index = i;
+            break;
         }
+        cur_ray = scattered;
+        attenuation_stack[i] = attenuation;
     }
-    return vec3(0.0, 0.0, 0.0); // exceeded recursion
+
+    for (int i = index-1; i >= 0; --i) {
+        ray_color_stack[i] = emitted_stack[i] + attenuation_stack[i] * ray_color_stack[i + 1];
+    }
+    return ray_color_stack[0];
 }
 
 __global__ void rand_init(curandState* rand_state) {
@@ -90,7 +100,6 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
     curand_init(1984 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-//__global__ void render(vec3* fb, int max_x, int max_y, int ns, camera** cam, hitable** world, curandState* rand_state, float* r_channel, float* g_channel, float* b_channel) {
 __global__ void render(int max_x, int max_y, int ns, camera * *cam, hitable * *world, curandState * rand_state, float* r_channel, float* g_channel, float* b_channel) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -198,8 +207,8 @@ __global__ void change_camera(int nx, int ny, int change, camera** d_camera) {
 }
 
 __global__ void create_camera(int nx, int ny, camera** d_camera) {
-    vec3 lookfrom(0, 1, 10);
-    vec3 lookat(0, 1, 0);
+    vec3 lookfrom(0, 10, 10);
+    vec3 lookat(0, 5, 0);
     float dist_to_focus = (lookfrom - lookat).length();
     float aperture = 0.1;
     *d_camera = new camera(lookfrom,
@@ -213,23 +222,35 @@ __global__ void create_camera(int nx, int ny, camera** d_camera) {
 
 __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-        Texture* image = new ImageTexture(dataPtr, 1024, 1024);
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
         Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
-        Texture* color = new ConstantTexture(vec3(128.0 / 255, 0, 128.0 / 255));
+        Texture* color1 = new ConstantTexture(vec3(128.0 / 255, 0, 128.0 / 255));
+        Texture* color2 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        Texture* color3 = new ConstantTexture(vec3(222.0 / 255, 84.0 / 255, 36.0 / 255));
+        Texture* color4 = new ConstantTexture(vec3(7.0 / 255, 115.0 / 255, 238.0 / 255));
+        Texture* color5 = new ConstantTexture(vec3(61.0 / 255, 64.0 / 255, 71.0 / 255));
         curandState local_rand_state = *rand_state;
         int i = 1;
         d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker)); 
-        d_list[i++] = new sphere(vec3(-6, 1, 0), 1.0, new dielectric(1.5));
-        d_list[i++] = new sphere(vec3(-2, 1, 0), 1.0, new lambertian(color));
-        d_list[i++] = new sphere(vec3(6, 1, 0), 1.0, new lambertian(image));
-        d_list[i++] = new sphere(vec3(2, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        //d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new diffuse_light(image));
+        
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5));
+        d_list[i++] = new sphere(vec3(0, 3, 0), 1.0, new lambertian(color1));
+        d_list[i++] = new sphere(vec3(0, 5, 0), 1.0, new lambertian(image));
+        d_list[i++] = new sphere(vec3(0, 7, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+
+        d_list[i++] = new xy_rect(-2, 2, 0, 8, -2, new lambertian(color5));
+        d_list[i++] = new yz_rect(0, 8, -2, 2, -2, new lambertian(color5));
+        d_list[i++] = new yz_rect(0, 8, -2, 2, 2, new lambertian(color5));
+        d_list[i++] = new xz_rect(-2, 2, -2, 2, 8, new diffuse_light(color2));
+
         *rand_state = local_rand_state;
         *d_world = new hitable_list(d_list, i);
     }
 }
 
 __global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camera) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 9; i++) {
         delete ((sphere*)d_list[i])->mat_ptr;
         delete d_list[i];
     }
@@ -241,9 +262,9 @@ int main(int argv, char** args) {
     // parameter initialize
     int nx = 800;
     int ny = 600;
-    int ns = 4;
-    int tx = 28;
-    int ty = 28;
+    int ns = 16;
+    int tx = 8;
+    int ty = 8;
     int num_pixels = nx * ny;
     size_t fb_size = num_pixels * sizeof(vec3);
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
@@ -302,8 +323,11 @@ int main(int argv, char** args) {
     // read texture image
     int iw, ih, n;
     unsigned char* idata = stbi_load("logo.jpg", &iw, &ih, &n, 0);
-    int ow = 1024;
-    int oh = 1024;
+    //unsigned char* idata = stbi_load("view3.jpg", &iw, &ih, &n, 0);
+    //int ow = 6656;
+    //int oh = 6656;
+    int ow = 4096;
+    int oh = 4096;
     auto* odata = (unsigned char*)malloc(ow * oh * n);
     stbir_resize(idata, iw, ih, 0, odata, ow, oh, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0,
         STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP,
@@ -317,7 +341,7 @@ int main(int argv, char** args) {
 
     // make our world of hitables & the camera
     hitable** d_list;
-    int num_hitables = 1 + 4;
+    int num_hitables = 9;
     checkCudaErrors(cudaMalloc((void**)&d_list, num_hitables * sizeof(hitable*)));
     hitable** d_world;
     checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hitable*)));
