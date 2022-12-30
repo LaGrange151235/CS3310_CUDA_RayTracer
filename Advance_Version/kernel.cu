@@ -206,7 +206,21 @@ __global__ void change_camera(int nx, int ny, int change, camera** d_camera) {
         dist_to_focus);
 }
 
-__global__ void create_camera(int nx, int ny, camera** d_camera) {
+__global__ void create_camera_0(int nx, int ny, camera** d_camera) {
+    vec3 lookfrom(0, -50, -30);
+    vec3 lookat(0, -50, 0);
+    float dist_to_focus = (lookfrom - lookat).length();
+    float aperture = 0.1;
+    *d_camera = new camera(lookfrom,
+        lookat,
+        vec3(0, 1, 0),
+        60.0,
+        float(nx) / float(ny),
+        aperture,
+        dist_to_focus);
+}
+
+__global__ void create_camera_1(int nx, int ny, camera** d_camera) {
     vec3 lookfrom(0, 10, 10);
     vec3 lookat(0, 5, 0);
     float dist_to_focus = (lookfrom - lookat).length();
@@ -220,7 +234,57 @@ __global__ void create_camera(int nx, int ny, camera** d_camera) {
         dist_to_focus);
 }
 
-__global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+__global__ void create_camera_2(int nx, int ny, camera** d_camera) {
+    vec3 lookfrom(0, 1, 5);
+    vec3 lookat(0, 1, 0);
+    float dist_to_focus = (lookfrom - lookat).length();
+    float aperture = 0.1;
+    *d_camera = new camera(lookfrom,
+        lookat,
+        vec3(0, 1, 0),
+        60.0,
+        float(nx) / float(ny),
+        aperture,
+        dist_to_focus);
+}
+
+__global__ void create_camera_3(int nx, int ny, camera** d_camera) {
+    vec3 lookfrom(6, 6, 6);
+    vec3 lookat(0, 1, 0);
+    float dist_to_focus = (lookfrom - lookat).length();
+    float aperture = 0.1;
+    *d_camera = new camera(lookfrom,
+        lookat,
+        vec3(0, 1, 0),
+        60.0,
+        float(nx) / float(ny),
+        aperture,
+        dist_to_focus);
+}
+
+__global__ void create_world_0(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(128.0 / 255, 0, 128.0 / 255));
+        Texture* color2 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        Texture* color3 = new ConstantTexture(vec3(222.0 / 255, 84.0 / 255, 36.0 / 255));
+        Texture* color4 = new ConstantTexture(vec3(7.0 / 255, 115.0 / 255, 238.0 / 255));
+        Texture* color5 = new ConstantTexture(vec3(61.0 / 255, 64.0 / 255, 71.0 / 255));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -50.0, 0), 100, new diffuse_light(image));
+        d_list[i++] = new sphere(vec3(0, -50, 0), 1.0, new diffuse_light(color3));
+        d_list[i++] = new sphere(vec3(-6, -50, 0), 1.0, new dielectric(1.5));
+        d_list[i++] = new sphere(vec3(-3, -50, 0), 1.0, new lambertian(color1));
+        d_list[i++] = new sphere(vec3(3, -50, 0), 1.0, new lambertian(checker));
+        d_list[i++] = new sphere(vec3(6, -50, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void create_world_1(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         Texture* image = new ImageTexture(dataPtr, 4096, 4096);
         Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
@@ -232,26 +296,173 @@ __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_cam
         curandState local_rand_state = *rand_state;
         int i = 1;
         d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker)); 
-        //d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new diffuse_light(image));
-        
-        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5));
-        d_list[i++] = new sphere(vec3(0, 3, 0), 1.0, new lambertian(color1));
-        d_list[i++] = new sphere(vec3(0, 5, 0), 1.0, new lambertian(image));
-        d_list[i++] = new sphere(vec3(0, 7, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
-
-        d_list[i++] = new xy_rect(-2, 2, 0, 8, -2, new lambertian(color5));
-        d_list[i++] = new yz_rect(0, 8, -2, 2, -2, new lambertian(color5));
-        d_list[i++] = new yz_rect(0, 8, -2, 2, 2, new lambertian(color5));
-        d_list[i++] = new xz_rect(-2, 2, -2, 2, 8, new diffuse_light(color2));
-
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new diffuse_light(color3));
+        d_list[i++] = new sphere(vec3(-6, 1, 0), 1.0, new dielectric(1.5));
+        d_list[i++] = new sphere(vec3(-3, 1, 0), 1.0, new lambertian(color1));
+        d_list[i++] = new sphere(vec3(3, 1, 0), 1.0, new lambertian(image));
+        d_list[i++] = new sphere(vec3(6, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        d_list[i++] = new xz_rect(-8, 8, -2, 2, 5, new diffuse_light(color2));
+        d_list[i++] = new xy_rect(-8, 8, 0, 5, -2, new lambertian(color4));
+        d_list[i++] = new yz_rect(0, 5, -2, 2, -8, new lambertian(color4));
+        d_list[i++] = new yz_rect(0, 5, -2, 2, 8, new lambertian(color4));
         *rand_state = local_rand_state;
         *d_world = new hitable_list(d_list, i);
     }
 }
 
-__global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camera) {
-    for (int i = 0; i < 9; i++) {
+__global__ void create_world_2(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        Texture* color2 = new ConstantTexture(vec3(128.0 / 255, 0, 128.0 / 255));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker));
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new lambertian(color2));
+        d_list[i++] = new xz_rect(-2, 2, -2, 2, 4, new diffuse_light(color1));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void create_world_3(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker));
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        d_list[i++] = new xz_rect(-2, 2, -2, 2, 4, new diffuse_light(color1));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void create_world_4(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker));
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5));
+        d_list[i++] = new xz_rect(-2, 2, -2, 2, 4, new diffuse_light(color1));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void create_world_5(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker));
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new lambertian(image));
+        d_list[i++] = new xz_rect(-2, 2, -2, 2, 4, new diffuse_light(color1));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void create_world_6(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker));
+        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new diffuse_light(color1));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void create_world_7(hitable** d_list, hitable** d_world, camera** d_camera, int nx, int ny, curandState* rand_state, unsigned char* dataPtr) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        Texture* image = new ImageTexture(dataPtr, 4096, 4096);
+        Texture* checker = new CheckerTexture(new ConstantTexture(vec3(0.2, 0.3, 0.1)), new ConstantTexture(vec3(0.9, 0.9, 0.9)));
+        Texture* color1 = new ConstantTexture(vec3(0.9, 0.9, 0.9));
+        Texture* color2 = new ConstantTexture(vec3(7.0 / 255, 115.0 / 255, 238.0 / 255));
+        curandState local_rand_state = *rand_state;
+        int i = 1;
+        d_list[0] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(checker));
+        d_list[i++] = new xz_rect(-2, 2, -2, 2, 5, new diffuse_light(color1));
+        d_list[i++] = new xz_rect(-1, 1, -1, 1, 2, new lambertian(color2));
+        d_list[i++] = new xy_rect(-1, 1, 0, 2, -1, new lambertian(color2));
+        d_list[i++] = new xy_rect(-1, 1, 0, 2, 1, new lambertian(color2));
+        d_list[i++] = new yz_rect(0, 2, -1, 1, -1, new lambertian(color2));
+        d_list[i++] = new yz_rect(0, 2, -1, 1, 1, new lambertian(color2));
+        *rand_state = local_rand_state;
+        *d_world = new hitable_list(d_list, i);
+    }
+}
+
+__global__ void free_world_0(hitable** d_list, hitable** d_world, camera** d_camera) {
+    for (int i = 0; i < 6; i++) {
         delete ((sphere*)d_list[i])->mat_ptr;
+        delete d_list[i];
+    }
+    delete* d_world;
+    delete* d_camera;
+}
+
+__global__ void free_world_1(hitable** d_list, hitable** d_world, camera** d_camera) {
+    for (int i = 0; i < 6; i++) {
+        delete ((sphere*)d_list[i])->mat_ptr;
+        delete d_list[i];
+    }
+    delete ((xz_rect*)d_list[6])->mp;
+    delete d_list[6];
+    delete ((xy_rect*)d_list[7])->mp;
+    delete d_list[7];
+    for (int i = 8; i < 10; i++) {
+        delete ((yz_rect*)d_list[i])->mp;
+        delete d_list[i];
+    }
+    delete* d_world;
+    delete* d_camera;
+}
+
+__global__ void free_world_2(hitable** d_list, hitable** d_world, camera** d_camera) {
+    for (int i = 0; i < 2; i++) {
+        delete ((sphere*)d_list[i])->mat_ptr;
+        delete d_list[i];
+    }
+    delete ((xz_rect*)d_list[2])->mp;
+    delete d_list[2];
+    delete* d_world;
+    delete* d_camera;
+}
+
+__global__ void free_world_3(hitable** d_list, hitable** d_world, camera** d_camera) {
+    for (int i = 0; i < 2; i++) {
+        delete ((sphere*)d_list[i])->mat_ptr;
+        delete d_list[i];
+    }
+    delete* d_world;
+    delete* d_camera;
+}
+
+__global__ void free_world_4(hitable** d_list, hitable** d_world, camera** d_camera) {
+    delete ((sphere*)d_list[0])->mat_ptr;
+    delete d_list[0];
+    for (int i = 1; i < 3; i++) {
+        delete ((xz_rect*)d_list[i])->mp;
+        delete d_list[i];
+    }
+    for (int i = 3; i < 5; i++) {
+        delete ((xy_rect*)d_list[i])->mp;
+        delete d_list[i];
+    }
+    for (int i = 5; i < 7; i++) {
+        delete ((yz_rect*)d_list[i])->mp;
         delete d_list[i];
     }
     delete* d_world;
@@ -262,11 +473,29 @@ int main(int argv, char** args) {
     // parameter initialize
     int nx = 800;
     int ny = 600;
-    int ns = 16;
-    int tx = 8;
-    int ty = 8;
+    int ns = 4;
+    int tx = 16;
+    int ty = 16;
     int num_pixels = nx * ny;
     size_t fb_size = num_pixels * sizeof(vec3);
+    int scene = 0;
+
+    std::cerr << "Which scene do you want to generate?(0-7):";
+    std::cin >> scene;
+    scene = scene % 8;
+    std::cerr << "How many samples for 1 pixel do you want?(4-1024):";
+    std::cin >> ns;
+    if (ns < 4)
+    {
+        ns = 4;
+    }
+    else {
+        ns = ns % 1025;
+        if (ns < 4)
+        {
+            ns = 4;
+        }
+    }
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
 
@@ -322,35 +551,112 @@ int main(int argv, char** args) {
 
     // read texture image
     int iw, ih, n;
-    unsigned char* idata = stbi_load("logo.jpg", &iw, &ih, &n, 0);
-    //unsigned char* idata = stbi_load("view3.jpg", &iw, &ih, &n, 0);
-    //int ow = 6656;
-    //int oh = 6656;
-    int ow = 4096;
-    int oh = 4096;
-    auto* odata = (unsigned char*)malloc(ow * oh * n);
-    stbir_resize(idata, iw, ih, 0, odata, ow, oh, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0,
-        STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_BOX, STBIR_FILTER_BOX,
-        STBIR_COLORSPACE_SRGB, nullptr
-    );
-    unsigned char* dataPtr;
-    checkCudaErrors(cudaMalloc((void**)&dataPtr, ow * oh * 3 * sizeof(unsigned char)));
-    checkCudaErrors(cudaMemcpy(dataPtr, odata, oh * ow * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice));
+    unsigned char* idata = NULL;
+    unsigned char* dataPtr = NULL;
+    if (scene == 0)
+    {   
+        int view = 0;
+        std::cerr << "Which view do you want to see?(0-2):";
+        std::cin >> view;
+        view = view % 3;
+        if (view == 0)
+        {
+            idata = stbi_load("./pic/view1.jpg", &iw, &ih, &n, 0);
+        }
+        if (view == 1)
+        {
+            idata = stbi_load("./pic/view2.jpg", &iw, &ih, &n, 0);
+        }
+        if (view == 2)
+        {
+            idata = stbi_load("./pic/view3.jpg", &iw, &ih, &n, 0);
+        }
+        int ow = 4096;
+        int oh = 4096;
+        auto* odata = (unsigned char*)malloc(ow * oh * n);
+        stbir_resize(idata, iw, ih, 0, odata, ow, oh, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0,
+            STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP,
+            STBIR_FILTER_BOX, STBIR_FILTER_BOX,
+            STBIR_COLORSPACE_SRGB, nullptr
+        );
+        checkCudaErrors(cudaMalloc((void**)&dataPtr, ow * oh * 3 * sizeof(unsigned char)));
+        checkCudaErrors(cudaMemcpy(dataPtr, odata, oh * ow * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice));
+    }
+    if (scene == 1 || scene == 5)
+    {
+        idata = stbi_load("./pic/logo.jpg", &iw, &ih, &n, 0);
+        int ow = 4096;
+        int oh = 4096;
+        auto* odata = (unsigned char*)malloc(ow * oh * n);
+        stbir_resize(idata, iw, ih, 0, odata, ow, oh, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0,
+            STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP,
+            STBIR_FILTER_BOX, STBIR_FILTER_BOX,
+            STBIR_COLORSPACE_SRGB, nullptr
+        );
+        checkCudaErrors(cudaMalloc((void**)&dataPtr, ow * oh * 3 * sizeof(unsigned char)));
+        checkCudaErrors(cudaMemcpy(dataPtr, odata, oh * ow * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice));
+    }
+    
 
 
     // make our world of hitables & the camera
     hitable** d_list;
-    int num_hitables = 9;
+    int num_hitables = 6;
     checkCudaErrors(cudaMalloc((void**)&d_list, num_hitables * sizeof(hitable*)));
     hitable** d_world;
     checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hitable*)));
     camera** d_camera;
     checkCudaErrors(cudaMalloc((void**)&d_camera, sizeof(camera*)));
-    create_world << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    if (scene == 0)
+    {
+        create_world_0 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 1)
+    {
+        create_world_1 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 2)
+    {
+        create_world_2 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 3)
+    {
+        create_world_3 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 4)
+    {
+        create_world_4 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 5)
+    {
+        create_world_5 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 6)
+    {
+        create_world_6 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
+    if (scene == 7)
+    {
+        create_world_7 << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2, dataPtr);
+    }
     //checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    create_camera << <1, 1 >> > (nx, ny, d_camera);
+    if (scene == 0)
+    {
+        create_camera_0 << <1, 1 >> > (nx, ny, d_camera);
+    }
+    if (scene == 1)
+    {
+        create_camera_1 << <1, 1 >> > (nx, ny, d_camera);
+    }
+    if (scene == 2 || scene == 3 || scene == 4 || scene == 5 || scene == 6)
+    {
+        create_camera_2 << <1, 1 >> > (nx, ny, d_camera);
+    }
+    if (scene == 7)
+    {
+        create_camera_3 << <1, 1 >> > (nx, ny, d_camera);
+    }
     //checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
@@ -373,7 +679,7 @@ int main(int argv, char** args) {
     SDL_RenderPresent(pRenderer);
     stop = clock();
     double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
-    std::cerr << "fps: " << 1 / timer_seconds << "\n";
+    std::cerr << "fps: " << 1 / timer_seconds << ", time:" << timer_seconds << "\n";
 
     while (isRunning)
     {
@@ -385,8 +691,7 @@ int main(int argv, char** args) {
                 isRunning = false;
             }
             else if (event.type == SDL_KEYDOWN)
-            {
-                //std::cerr << event.key.keysym.sym << '\n';
+            {   
                 // Render our buffer
                 clock_t start, stop;
                 start = clock();
@@ -405,21 +710,43 @@ int main(int argv, char** args) {
                 SDL_RenderPresent(pRenderer);
                 stop = clock();
                 double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
-                std::cerr << "fps: " << 1 / timer_seconds << "\n";
+                std::cerr << "fps: " << 1 / timer_seconds << ", time:" << timer_seconds << "\n";
             }
         }
     }
 
     // clean up
     checkCudaErrors(cudaDeviceSynchronize());
-    free_world << <1, 1 >> > (d_list, d_world, d_camera);
+    if (scene == 0)
+    {
+        free_world_0 << <1, 1 >> > (d_list, d_world, d_camera);
+        delete dataPtr;
+    }
+    if (scene == 1)
+    {
+        free_world_1 << <1, 1 >> > (d_list, d_world, d_camera);
+    }
+    if (scene == 2 || scene == 3 || scene == 4 || scene == 5)
+    {
+        free_world_2 << <1, 1 >> > (d_list, d_world, d_camera);
+        if (scene == 5)
+        {
+            delete dataPtr;
+        }
+    }
+    if (scene == 6)
+    {
+        free_world_3 << <1, 1 >> > (d_list, d_world, d_camera);
+    }
+    if (scene == 7)
+    {
+        free_world_4 << <1, 1 >> > (d_list, d_world, d_camera);
+    }
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaFree(d_camera));
-    checkCudaErrors(cudaFree(d_world));
+    checkCudaErrors(cudaFree(d_world));    
     checkCudaErrors(cudaFree(d_list));
     checkCudaErrors(cudaFree(d_rand_state));
-    checkCudaErrors(cudaFree(d_rand_state2));
-    //checkCudaErrors(cudaFree(fb));
     checkCudaErrors(cudaFree(d_rand_state2));
     checkCudaErrors(cudaFree(r_channel));
     checkCudaErrors(cudaFree(g_channel));
