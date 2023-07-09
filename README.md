@@ -103,12 +103,4 @@ I have implemented scenes as below:
     ```
    ![](pic/s10.png)
 ## Interaction
-<iframe 
-src="pic/interaction.mp4" 
-scrolling="no" 
-frameborder="no" 
-framespacing="0" 
-allowfullscreen="true" 
-height=870 
-width=1440> 
-</iframe>
+You can refer to  [interaction.mp4](pic/interaction.mp4).
