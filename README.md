@@ -104,8 +104,3 @@ I have implemented scenes as below:
    ![](pic/s10.png)
 ## Interaction
 You can refer to  [interaction.mp4](pic/interaction.mp4).
-## Demo
-
-
-Uploading CGPRJ_small.mp4…
-
